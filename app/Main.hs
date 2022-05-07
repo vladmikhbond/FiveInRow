@@ -12,7 +12,7 @@ main = do
 run :: IOArray Int Char -> IO ()
 run t = do
   drawTable t
-  putStrLn ">>>" 
+  putStrLn "q-quit >>" 
   s <- getLine
   if 'q' `elem` s 
     then return ()
