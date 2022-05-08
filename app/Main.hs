@@ -32,11 +32,11 @@ run t = do
           run t
 
 
-test_findSample = do
-  t <- newTable
-  puts t [22, 23, 24] 'x'
-  puts t [51, 42, 33, 24, 15] 'x'
-  drawTable t
-  lst <- getElems t
-  let bounds = findSample lst " xxxxx "
-  print bounds
+-- test_findSample = do
+--   t <- newTable
+--   puts t [22, 23, 24] 'x'
+--   puts t [51, 42, 33, 24, 15] 'x'
+--   drawTable t
+--   lst <- getElems t
+--   let bounds = findSample lst " xxxxx "
+--   print bounds

@@ -1,11 +1,12 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use putStrLn" #-}
 {-# HLINT ignore "Eta reduce" #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 
 module Lib (
   size, get, put, puts, newTable, drawTable, findSample, isCellEmpty, stepO,rndStepO, 
-  test, getPotentPoses,
+  test, getPotentPos, getPotentPoses,
   Table, Pos, Matr, Sample ) where
 
 import Data.Array.IO
@@ -97,13 +98,21 @@ findSamples2 matr samples = concatMap f samples
    f sample  = (\(p1, p2) -> (p1, p2, sample)) <$> findSample matr sample
 
 getPotentPos :: (Pos, Pos, Sample) -> [Pos]     -- getPotentPos ((1, 5), (4, 2), "x x ")  ->  [(2,4),(4,2)]
-getPotentPos ((r1, c1), (r2, c2), sample) = 
-  [(r, c) | (r, c, s) <- zip3 [r1..r2] [c1, c1+dCol..c2] sample, s == ' ']
+getPotentPos ((r1, c1), (r2, c2), sample) 
+  | r1 == r2  = [(r1, c) | (c, s) <- zip [c1..c2] sample, s == ' ']
+  | c1 == c2  = [(r, c1) | (r, s) <- zip [r1..r2] sample, s == ' ']
+  | otherwise = [(r, c)  | (r, c, s) <- zip3 [r1..r2] [c1, c1+dCol..c2] sample, s == ' ']
  where 
   dCol = signum (c2 - c1)
 
-getPotentPoses :: [(Pos, Pos, Sample)] -> [Pos]     -- getPotentPoses [((1, 5), (4, 2), "x x ")]  ->  [(2,4),(4,2)]
-getPotentPoses ts = concatMap getPotentPos ts
+getPotentPoses :: [(Pos, Pos, Sample)] -> [Pos]  -- getPotentPoses [((1, 5), (4, 2), "x x ")]  ->  [(2,4),(4,2)]
+getPotentPoses trios = concatMap getPotentPos trios
+    
+f :: Matr -> [Sample] -> [Pos] 
+f matr samples = let
+  trios = findSamples2 matr samples
+  in 
+    getPotentPoses trios
 
 
 isCellEmpty :: Table -> Pos -> IO Bool
@@ -116,16 +125,7 @@ isCellEmpty table (r, c) = do
       return False
 -------------------------------------------------------------
 
--- tbl = do
---   t <- newTable
---   puts t [(2,2), (2,3), (2,4)] 'x'
---   --puts t [(2,2), (3,2), (4,2)] 'x'
---   --puts t [(1,1), (2,2), (3,3)] 'x'
---   puts t [(5,1), (4,2), (3,3), (2,4), (1,5)] 'x'
-
---   pos <- stepO t
---   return ()
-samples = [
+samples_ = [
   " oooo", "o ooo", "oo oo", "ooo o", "oooo ", 
   " xxxx", "x xxx", "xx xx", "xxx x", "xxxx ", 
   " ooo", "ooo ", " xxx", "xxx ", " oo", "oo " , " xx", "xx ", " o", "o " 
@@ -134,12 +134,13 @@ samples = [
 stepO :: Table -> IO Pos
 stepO t = do
   drawTable t
-  lst <- getElems t
-  let bounds = findSamples lst samples
-  --putStr "bounds: " >> print bounds -------------------
-  let ps = concat [ [p1, p2] | (p1, p2) <- bounds]
-  empties <- filterEmptyPlaces t ps
-  --putStr "empties: " >> print empties -------------------
+  matr <- getElems t
+
+  let trios = findSamples2 matr samples_
+  print trios
+  let empties = getPotentPoses trios
+  print empties
+  --getLine ---------------
   if null empties
     then rndStepO t
     else (return . head) empties
@@ -164,28 +165,20 @@ test = do
 
 
 
-filterEmptyPlaces :: Table -> [Pos] -> IO [Pos]
-filterEmptyPlaces t [] = return []
-filterEmptyPlaces t (p: ps) = do
-  b <- isCellEmpty t p
-  ps' <- filterEmptyPlaces t ps
-  if b 
-    then return (p : ps')
-    else return ps'
 
 
-
--- stepO :: Table -> IO Pos
--- stepO table = do
---   rnd <- rnd100
---   let pos = rnd `divMod` 10
---   isEmpty <- isCellEmpty table pos
---   if isEmpty
---     then return pos 
---     else stepO table
 {-- 
   знаходимо межі всіх зразків, впорядковані по зменшості ціни - findSamples
   серед знайдених меж обираємо першу, яка припадає на вільне поле
   ставимо в неї "о"                              
 --}
+
+-- filterEmptyPlaces :: Table -> [Pos] -> IO [Pos]
+-- filterEmptyPlaces t [] = return []
+-- filterEmptyPlaces t (p: ps) = do
+--   b <- isCellEmpty t p
+--   ps' <- filterEmptyPlaces t ps
+--   if b 
+--     then return (p : ps')
+--     else return ps'
 
