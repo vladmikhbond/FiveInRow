@@ -7,14 +7,26 @@ hideCur = "\27[?25l" -- CSI ?25l
 showCur = "\27[?25h" -- CSI ?25h
 
 -- text colors
+black = "\27[30m"
 red = "\27[31m"
 green = "\27[32m"
 yellow = "\27[33m"
 blue = "\27[34m"
 magenta = "\27[35m"
 cian = "\27[36m"
+white = "\27[37m"
 norm = "\27[m"
 gray = "\27[1m\27[30m"
+-- back color
+blackB = "\27[40m"
+redB = "\27[41m"
+greenB = "\27[42m"
+yellowB = "\27[43m"
+blueB = "\27[44m"
+magentaB = "\27[45m"
+cianB = "\27[46m"
+whiteB = "\27[47m"
+
 
 -- cur movement
 rc row col = "\27["++ show row ++";"++ show col ++"f"  -- row,col = 1,2,3...

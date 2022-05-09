@@ -6,7 +6,7 @@
 
 
 module Lib (
-  stepO, put, puts, isCellEmpty, drawTable, newTable, whoWon, hilightWin, hilightPosO, Table 
+  stepO, put, puts, isCellEmpty, drawTable, newTable, whoWon, hilightWin, hilightPos, Table 
  ) where
 
 import Control.Monad (sequence_, mapM_)
@@ -17,6 +17,7 @@ import Data.Maybe ( fromJust, isJust )
 import System.Random ( initStdGen, uniformR, StdGen )
 import Consul 
 import System.IO ( hFlush, stdout )
+import Control.Concurrent ( threadDelay )
 
 
 type Table = IOArray Int Char
@@ -50,7 +51,7 @@ drawCell :: [Char] -> Int -> Int -> IO ()
 drawCell cs row col
   | c == '\n' = putStr $ rc row' col' ++ "\n"
   | c == 'x'  = putStr $ rc row' (col'+1) ++ green  ++ "><"
-  | c == 'o'  = putStr $ rc row' (col'+1) ++ yellow ++ "<>"
+  | c == 'o'  = putStr $ rc row' (col'+1) ++ red ++ "<>"
   | otherwise = putStr $ rc row' (col'+1) ++ gray ++ show row ++ show col
   where
     i = size * row + col
@@ -64,10 +65,16 @@ hilightWin table (who, segment) = do
    hFlush stdout
  where   
    simbol = if who == 'x' then "><" else "<>" 
-   f (r, c) = putStr $ rc (r + 2) (c*3 + 4) ++ red  ++ simbol 
+   f (r, c) = putStr $ rc (r + 2) (c*3 + 4) ++ yellow  ++ simbol 
 
-hilightPosO :: Table -> Pos -> IO ()
-hilightPosO t (r, c) = putStr (rc (r + 2) (c*3 + 4) ++ cian  ++ "<>") >> hFlush stdout 
+hilightPos :: Table -> Pos -> IO ()
+hilightPos t (r, c) = do
+  putStr (rc (r + 2) (c*3 + 4) ++ yellow  ++ "<>")
+  hFlush stdout 
+  threadDelay 1000000
+  putStr (rc (r + 2) (c*3 + 4) ++ red  ++ "<>")
+  hFlush stdout 
+
 
 
 -- UTILS ------------------------------------------------
@@ -146,14 +153,19 @@ whoWon t = do
 samples_ = [
   " oooo", "o ooo", "oo oo", "ooo o", "oooo ", 
   " xxxx", "x xxx", "xx xx", "xxx x", "xxxx ",
+  
+  " ooo ",
+  " xxx ",
 
   " ooo", "o oo", "oo o", "ooo ",  
   " xxx", "x xx"," xx x", "xxx ",
   
    " oo", "o o", "oo ",
-   " o", "o " ,
+   " xx", "x x", "xx ",
+   
+   " o", "o ",
+   " x", "x " 
 
-   " xx", "x x", "xx "
   ]
 
 stepO :: Table -> IO Pos
@@ -169,16 +181,12 @@ stepO t = do
 rndStepO :: Table -> IO Pos 
 rndStepO t = do
    g0 <- initStdGen
-   let (a, g1) = uniformR (0, 9) g0 :: (Int, StdGen) 
-   let (b, g) = uniformR (0, 9) g1 :: (Int, StdGen) 
+   let (a, g1) = uniformR (2, 7) g0 :: (Int, StdGen) 
+   let (b, g) = uniformR (2, 7) g1 :: (Int, StdGen) 
    empty <- isCellEmpty t (a, b) 
    if empty 
      then return (a, b)  
      else rndStepO t
-
-
-
-
 
 
 

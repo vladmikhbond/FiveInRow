@@ -7,8 +7,6 @@ import Text.Read ( readMaybe )
 import Lib
 import Consul
 import System.IO ( hFlush, stdout )
-import Control.Concurrent ( threadDelay )
-
 
 main :: IO ()
 main = do
@@ -47,8 +45,8 @@ twoMoves t nn = do
         else do
           posO <- stepO t
           put t posO 'o'
-          hilightPosO t posO    ------------
-          threadDelay 1000000
+          hilightPos t posO    ------------
+          
           drawTable t
           who <- whoWon t
           if fst who == 'o'
@@ -57,7 +55,7 @@ twoMoves t nn = do
 
 epilog t who = do
   hilightWin t who
-  putStr "Continue ? [y], n >"
+  putStr $ norm ++ rc 12 0 ++ showCur ++  "Continue ? [y], n >"
   hFlush stdout
   ans <- getLine
   when (ans /= "n") main
