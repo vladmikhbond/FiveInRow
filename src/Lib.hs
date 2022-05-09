@@ -113,8 +113,8 @@ findSample matr xs = let
   [ fromJust x |  x <- hor ++ ver ++ dia ++ aid, isJust x]
 
 
-findSamples :: Matr -> [Sample] -> [(Pos, Pos, Sample)]
-findSamples matr samples = concatMap f samples 
+findSamples :: Matr -> [(Pos, Pos, Sample)]
+findSamples matr = concatMap f samples_ 
  where
    f sample  = (\(p1, p2) -> (p1, p2, sample)) <$> findSample matr sample
 
@@ -172,11 +172,11 @@ stepO :: Table -> IO Pos
 stepO t = do
   matr <- getElems t
 
-  let trios = findSamples matr samples_
-  let empties = getPotentPoses trios
-  if null empties
+  let trios = findSamples matr
+  let potentPoses = getPotentPoses trios
+  if null potentPoses
     then rndStepO t
-    else (return . head) empties
+    else (return . head) potentPoses
   
 rndStepO :: Table -> IO Pos 
 rndStepO t = do
