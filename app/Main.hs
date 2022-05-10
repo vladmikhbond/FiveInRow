@@ -44,7 +44,7 @@ twoMoves t nn = do
       if fst who == 'x'
         then epilog t who
         else do
-          posO <- stepO t 0   --------------
+          (_, posO) <- nextStep 'o' t 0   --------------
           put t posO 'o'
           hilightPos t 'o' posO  
           who <- whoWon t

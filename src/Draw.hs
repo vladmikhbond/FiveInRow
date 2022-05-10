@@ -28,7 +28,7 @@ drawCell cs row col
 
 hilightWin :: Table -> (Char, (Pos, Pos)) -> IO ()
 hilightWin table (who, segment) = do
-   mapM_ f (interpol segment)
+   mapM_ f (interpolation segment)
  where
    simbol = if who == 'x' then _cross else _zero
    f (r, c) = putStr $ rc (r + 2) (c*3 + 4) ++ yellow  ++ simbol

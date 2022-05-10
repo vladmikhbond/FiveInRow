@@ -7,7 +7,7 @@
 
 
 module Lib (
-  _size, interpol, stepO, put, puts, isCellEmpty, newTable, whoWon,  Table, Pos
+  _size, interpolation, nextStep, put, puts, isCellEmpty, newTable, whoWon,  Table, Pos
  ) where
 
 import Control.Monad (sequence_, mapM_)
@@ -44,7 +44,7 @@ newTable = newArray (0, _size^2 - 1) ' '
 
 -- UTILS ------------------------------------------------
 
-interpol ((r1, c1), (r2, c2))
+interpolation ((r1, c1), (r2, c2))
   | r1 == r2  = [(r1, c) | c <- [c1..c2] ]
   | c1 == c2  = [(r, c1) | r <- [r1..r2] ]
   | otherwise = [(r, c)  | (r, c) <- zip [r1..r2] [c1, c1+dCol..c2]]
@@ -86,7 +86,7 @@ getPricedSteps trios = (reverse . sort) (concatMap getPricedStep trios)
  where
   getPricedStep :: (Pos, Pos, Sample) -> [(Price, Pos)]
   getPricedStep (p1, p2, sample) =
-    [(getSamplePrice sample, p) | (p, s) <- zip (interpol (p1, p2)) sample, s == ' ']
+    [(getSamplePrice sample, p) | (p, s) <- zip (interpolation (p1, p2)) sample, s == ' ']
 
 
 
@@ -152,28 +152,26 @@ whoWon t = do
 
 --}
 
+nextStep :: Val -> Table -> Int -> IO (Price, Pos)
+nextStep v t 0 = do
+  steps <- getBestSteps t v
+  if null steps
+    then rndStepO t
+    else return $ head steps
 
-
-
--- stepO :: Table -> IO Pos
--- stepO t = do
---   steps <- getBestStepsO t
---   if null steps
---     then rndStepO t
---     else return $ snd (head steps)
-
-stepO :: Table -> Int -> IO Pos
-stepO t level = do
-  steps <- getBestSteps t 'o'
+nextStep v t level = do
+  steps <- getBestSteps t v
   if null steps
     then rndStepO t
     else do
-      -- ts :: IO [Table] - таблицы со сделанными ходами 
-      let ts = mapM (\(_, pos) -> do {t' <- mapArray id t; put t' pos 'о'; return t'} ) steps 
+      -- ts :: IO [Table] - список таблиц со сделанными ходами 
+      ts <- mapM (\(_, pos) -> do {t' <- mapArray id t; put t' pos 'о'; return t'} ) steps 
+      let v' = if v == 'x' then 'o' else 'x'
+      let steps' = mapM (\tbl -> nextStep v' tbl (level-1)) ts
 
-      return $ snd (head steps)
+      return $ head steps
 
--- todo
+
 
 getBestSteps :: Table -> Val -> IO [(Price, Pos)]
 getBestSteps t 'o' = getBestStepsO t
@@ -200,14 +198,14 @@ getBestStepsO t = do
 
 
 
-rndStepO :: Table -> IO Pos
+rndStepO :: Table -> IO (Price, Pos)
 rndStepO t = do
    g0 <- initStdGen
    let (a, g1) = uniformR (2, 7) g0 :: (Int, StdGen)
    let (b, g) = uniformR (2, 7) g1 :: (Int, StdGen)
    empty <- isCellEmpty t (a, b)
    if empty
-     then return (a, b)
+     then return (0, (a, b))
      else rndStepO t
 
 
