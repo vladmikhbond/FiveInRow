@@ -6,7 +6,7 @@
 
 
 module Lib (
-  stepO, put, puts, isCellEmpty, drawTable, newTable, whoWon, hilightWin, hilightPos, Table 
+  _size, interpol, stepO, put, puts, isCellEmpty, newTable, whoWon,  Table, Pos 
  ) where
 
 import Control.Monad (sequence_, mapM_)
@@ -24,62 +24,23 @@ type Table = IOArray Int Char
 type Pos = (Int, Int)
 type Matr = [Char]
 type Sample = String
-size = 10
+_size = 10
 
 get :: Table -> Pos -> IO Char
-get table (i, j) = readArray table (i * size + j)
+get table (i, j) = readArray table (i * _size + j)
 
 put :: Table -> Pos -> Char -> IO ()
-put table (i, j) = writeArray table (i * size + j)
+put table (i, j) = writeArray table (i * _size + j)
 
 puts :: Table -> [Int] -> Char -> IO ()
 puts table ns v = mapM_ (\n -> put table (divMod n 10) v) ns
 
 newTable :: IO Table
-newTable = newArray (0, size^2 - 1) ' '
-
--- DRAWING -----------------------------------------------------
-
-drawTable :: Table -> IO ()
-drawTable table = do
-  putStr $ hideCur ++ rc 0 0 
-  cs <-  getElems table
-  sequence_ [drawCell cs r c | r <- [0..size - 1], c <- [0..size - 1]]
-  putStrLn norm
-
-drawCell :: [Char] -> Int -> Int -> IO ()
-drawCell cs row col
-  | c == '\n' = putStr $ rc row' col' ++ "\n"
-  | c == 'x'  = putStr $ rc row' (col'+1) ++ green  ++ "><"
-  | c == 'o'  = putStr $ rc row' (col'+1) ++ red ++ "<>"
-  | otherwise = putStr $ rc row' (col'+1) ++ gray ++ show row ++ show col
-  where
-    i = size * row + col
-    c = cs !! i
-    col' = (col + 1) * 3
-    row' = row + 2
-
-hilightWin :: Table -> (Char, (Pos, Pos)) -> IO ()
-hilightWin table (who, segment) = do
-   mapM_ f (unpack segment)
-   hFlush stdout
- where   
-   simbol = if who == 'x' then "><" else "<>" 
-   f (r, c) = putStr $ rc (r + 2) (c*3 + 4) ++ yellow  ++ simbol 
-
-hilightPos :: Table -> Pos -> IO ()
-hilightPos t (r, c) = do
-  putStr (rc (r + 2) (c*3 + 4) ++ yellow  ++ "<>")
-  hFlush stdout 
-  threadDelay 1000000
-  putStr (rc (r + 2) (c*3 + 4) ++ red  ++ "<>")
-  hFlush stdout 
-
-
+newTable = newArray (0, _size^2 - 1) ' '
 
 -- UTILS ------------------------------------------------
 
-unpack ((r1, c1), (r2, c2)) 
+interpol ((r1, c1), (r2, c2)) 
   | r1 == r2  = [(r1, c) | c <- [c1..c2] ]
   | c1 == c2  = [(r, c1) | r <- [r1..r2] ]
   | otherwise = [(r, c)  | (r, c) <- zip [r1..r2] [c1, c1+dCol..c2]]
@@ -89,17 +50,40 @@ unpack ((r1, c1), (r2, c2))
 insertSepByN n [] sep = []
 insertSepByN n xs sep = let (zs, rs) = splitAt n xs
                in zs ++ [sep] ++ insertSepByN n rs sep
+
 ---------------------------------------------------------
+_samples = [
+  " oooo", "o ooo", "oo oo", "ooo o", "oooo ", 
+  " xxxx", "x xxx", "xx xx", "xxx x", "xxxx ",
+  
+  " ooo ",
+  " xxx ",
+
+  " ooo", "o oo", "oo o", "ooo ",  
+  " xxx", "x xx"," xx x", "xxx ",
+  
+   " oo", "o o", "oo ",
+   " xx", "x x", "xx ",
+   
+   " o", "o ",
+   " x", "x " 
+
+  ]
+
+findSamples :: Matr -> [(Pos, Pos, Sample)]
+findSamples matr = concatMap f _samples 
+ where
+   f sample  = (\(p1, p2) -> (p1, p2, sample)) <$> findSample matr sample
 
 findSample :: Matr -> Sample -> [(Pos, Pos)]
 findSample matr xs = let
   n = length xs
-  val r c = matr !! (r * size + c)
+  val r c = matr !! (r * _size + c)
 
-  hor = [horEq r c | r <- [0..size-1], c <- [0..size-n] ]
-  ver = [verEq r c | r <- [0..size-n], c <- [0..size-1] ]
-  dia = [diaEq r c | r <- [0..size-n], c <- [0..size-n] ]
-  aid = [aidEq r c | r <- [0..size-n], c <- [n-1..size-1] ]
+  hor = [horEq r c | r <- [0.._size-1], c <- [0.._size-n] ]
+  ver = [verEq r c | r <- [0.._size-n], c <- [0.._size-1] ]
+  dia = [diaEq r c | r <- [0.._size-n], c <- [0.._size-n] ]
+  aid = [aidEq r c | r <- [0.._size-n], c <- [n-1.._size-1] ]
 
   horEq r c = if [val r (c+i)     | i <- [0..n-1]] /= xs then Nothing
     else Just ((r, c), (r, c+n-1))
@@ -113,25 +97,24 @@ findSample matr xs = let
   [ fromJust x |  x <- hor ++ ver ++ dia ++ aid, isJust x]
 
 
-findSamples :: Matr -> [(Pos, Pos, Sample)]
-findSamples matr = concatMap f samples_ 
- where
-   f sample  = (\(p1, p2) -> (p1, p2, sample)) <$> findSample matr sample
-
 getPotentPos :: (Pos, Pos, Sample) -> [Pos]     -- getPotentPos ((1, 5), (4, 2), "x x ")  ->  [(2,4),(4,2)]
-getPotentPos ((r1, c1), (r2, c2), sample) 
-  | r1 == r2  = [(r1, c) | (c, s) <- zip [c1..c2] sample, s == ' ']
-  | c1 == c2  = [(r, c1) | (r, s) <- zip [r1..r2] sample, s == ' ']
-  | otherwise = [(r, c)  | (r, c, s) <- zip3 [r1..r2] [c1, c1+dCol..c2] sample, s == ' ']
- where 
-  dCol = signum (c2 - c1)
+getPotentPos (p1, p2, sample) = 
+  [p | (p, s) <- zip (interpol (p1, p2)) sample, s == ' ']
+
+
+
+--   | r1 == r2  = [(r1, c) | (c, s) <- zip [c1..c2] sample, s == ' ']
+--   | c1 == c2  = [(r, c1) | (r, s) <- zip [r1..r2] sample, s == ' ']
+--   | otherwise = [(r, c)  | (r, c, s) <- zip3 [r1..r2] [c1, c1+dCol..c2] sample, s == ' ']
+--  where 
+--   dCol = signum (c2 - c1)
 
 getPotentPoses :: [(Pos, Pos, Sample)] -> [Pos]  -- getPotentPoses [((1, 5), (4, 2), "x x ")]  ->  [(2,4),(4,2)]
 getPotentPoses trios = concatMap getPotentPos trios
     
 isCellEmpty :: Table -> Pos -> IO Bool
 isCellEmpty table (r, c) = do
-  if r >= 0 && r < size && c >= 0 && c < size
+  if r >= 0 && r < _size && c >= 0 && c < _size
     then do
       v <- get table (r, c)
       return $ v == ' '
@@ -150,23 +133,6 @@ whoWon t = do
    else return (' ', ((0,0), (0,0)))
 -------------------------------------------------------------
 
-samples_ = [
-  " oooo", "o ooo", "oo oo", "ooo o", "oooo ", 
-  " xxxx", "x xxx", "xx xx", "xxx x", "xxxx ",
-  
-  " ooo ",
-  " xxx ",
-
-  " ooo", "o oo", "oo o", "ooo ",  
-  " xxx", "x xx"," xx x", "xxx ",
-  
-   " oo", "o o", "oo ",
-   " xx", "x x", "xx ",
-   
-   " o", "o ",
-   " x", "x " 
-
-  ]
 
 stepO :: Table -> IO Pos
 stepO t = do

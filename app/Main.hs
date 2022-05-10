@@ -6,6 +6,7 @@ import Control.Monad ( when )
 import Text.Read ( readMaybe )
 import Lib
 import Consul
+import Draw
 import System.IO ( hFlush, stdout )
 
 main :: IO ()
@@ -38,16 +39,14 @@ twoMoves t nn = do
     then run t
     else do
       put t posX 'x'
-      drawTable t
+      hilightPos t 'x' posX     ------------
       who <- whoWon t
       if fst who == 'x'
         then epilog t who
         else do
           posO <- stepO t
           put t posO 'o'
-          hilightPos t posO    ------------
-          
-          drawTable t
+          hilightPos t 'o' posO    ------------
           who <- whoWon t
           if fst who == 'o'
             then epilog t who
