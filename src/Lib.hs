@@ -6,7 +6,7 @@
 
 
 module Lib (
-  _size, interpol, stepO, put, puts, isCellEmpty, newTable, whoWon,  Table, Pos 
+  _size, interpol, stepO, put, puts, isCellEmpty, newTable, whoWon,  Table, Pos
  ) where
 
 import Control.Monad (sequence_, mapM_)
@@ -15,15 +15,17 @@ import Data.Foldable (Foldable(foldl'))
 import Data.Time.Clock ( getCurrentTime, UTCTime(utctDayTime) )
 import Data.Maybe ( fromJust, isJust )
 import System.Random ( initStdGen, uniformR, StdGen )
-import Consul 
+import Consul
 import System.IO ( hFlush, stdout )
 import Control.Concurrent ( threadDelay )
+import Data.List (sort)
 
 
 type Table = IOArray Int Char
 type Pos = (Int, Int)
 type Matr = [Char]
 type Sample = String
+type Price = Int
 _size = 10
 
 get :: Table -> Pos -> IO Char
@@ -40,11 +42,11 @@ newTable = newArray (0, _size^2 - 1) ' '
 
 -- UTILS ------------------------------------------------
 
-interpol ((r1, c1), (r2, c2)) 
+interpol ((r1, c1), (r2, c2))
   | r1 == r2  = [(r1, c) | c <- [c1..c2] ]
   | c1 == c2  = [(r, c1) | r <- [r1..r2] ]
   | otherwise = [(r, c)  | (r, c) <- zip [r1..r2] [c1, c1+dCol..c2]]
-  where 
+  where
     dCol = signum (c2 - c1)
 
 insertSepByN n [] sep = []
@@ -52,26 +54,62 @@ insertSepByN n xs sep = let (zs, rs) = splitAt n xs
                in zs ++ [sep] ++ insertSepByN n rs sep
 
 ---------------------------------------------------------
-_samples = [
-  " oooo", "o ooo", "oo oo", "ooo o", "oooo ", 
-  " xxxx", "x xxx", "xx xx", "xxx x", "xxxx ",
-  
-  " ooo ",
-  " xxx ",
+-- _samples = [
+--   " oooo", "o ooo", "oo oo", "ooo o", "oooo ",   -- 1000
+--   " xxxx", "x xxx", "xx xx", "xxx x", "xxxx ",   --  999
 
-  " ooo", "o oo", "oo o", "ooo ",  
-  " xxx", "x xx"," xx x", "xxx ",
-  
-   " oo", "o o", "oo ",
-   " xx", "x x", "xx ",
-   
-   " o", "o ",
-   " x", "x " 
+--   " ooo ",                                       -- 100 
+--   " xxx ",                                       --  99 
 
+--   " ooo", "o oo", "oo o", "ooo ",                -- 50   
+--   " xxx", "x xx"," xx x", "xxx ",                -- 49
+
+--    " oo", "o o", "oo ",                            
+--    " xx", "x x", "xx ",
+
+--    " o", "o ",
+--    " x", "x " 
+
+--   ]
+
+_pricedSamples :: [([Sample], Price)]
+_pricedSamples = [
+  ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 1000),
+  ([" xxxx", "x xxx", "xx xx", "xxx x", "xxxx "], 999),
+
+  ([" ooo "], 100),
+  ([" xxx "], 99),
+
+  ([" ooo", "o oo", "oo o", "ooo "], 50),
+  ([" xxx", "x xx"," xx x", "xxx "], 49),
+
+   ([" oo", "o o", "oo "], 2),
+   ([" xx", "x x", "xx "], 2),
+
+  ([ " o", "o ", " x", "x "], 0)
   ]
 
+_samples :: [Sample]
+_samples = concatMap fst _pricedSamples
+
+getSamplePrice :: Sample -> Price
+getSamplePrice s = head [p | (ss, p) <- _pricedSamples, s `elem` ss]
+--------------------------------------
+
+-- getPricedSteps [((1, 5), (4, 2), "x x ")]  ->  [((2,4), 100),((4,2), 100)]
+getPricedSteps :: [(Pos, Pos, Sample)] -> [(Price, Pos)]
+getPricedSteps trios = (reverse . sort) (concatMap getPricedStep trios)
+ where
+  getPricedStep :: (Pos, Pos, Sample) -> [(Price, Pos)]
+  getPricedStep (p1, p2, sample) =
+    [(getSamplePrice sample, p) | (p, s) <- zip (interpol (p1, p2)) sample, s == ' ']
+
+
+
+---------------------------------------------
+
 findSamples :: Matr -> [(Pos, Pos, Sample)]
-findSamples matr = concatMap f _samples 
+findSamples matr = concatMap f _samples
  where
    f sample  = (\(p1, p2) -> (p1, p2, sample)) <$> findSample matr sample
 
@@ -97,14 +135,7 @@ findSample matr xs = let
   [ fromJust x |  x <- hor ++ ver ++ dia ++ aid, isJust x]
 
 
-getPossStep :: (Pos, Pos, Sample) -> [Pos]     -- getPossStep ((1, 5), (4, 2), "x x ")  ->  [(2,4),(4,2)]
-getPossStep (p1, p2, sample) = 
-  [p | (p, s) <- zip (interpol (p1, p2)) sample, s == ' ']
 
-
-getPossibleSteps :: [(Pos, Pos, Sample)] -> [Pos]  -- getPossibleSteps [((1, 5), (4, 2), "x x ")]  ->  [(2,4),(4,2)]
-getPossibleSteps trios = concatMap getPossStep trios
-    
 isCellEmpty :: Table -> Pos -> IO Bool
 isCellEmpty table (r, c) = do
   if r >= 0 && r < _size && c >= 0 && c < _size
@@ -125,34 +156,46 @@ whoWon t = do
    then return ('o', head os)
    else return (' ', ((0,0), (0,0)))
 -------------------------------------------------------------
+{-- 
+  знаходимо всі зразки, які є в даному стані гри  
+  
+  знаходимо всі доцільні ходи "о"
+  для кожного ходу 
+      знаходимо все доцільні ходи "х"
+      оцінюємо стан після кожного ходу "х"
+  
+  
+
+--}
+
+
 
 
 stepO :: Table -> IO Pos
 stepO t = do
-  matr <- getElems t
-
-  let trios = findSamples matr
-  let potentPoses = getPossibleSteps trios
-  if null potentPoses
+  steps <- getBestSteps t
+  if null steps
     then rndStepO t
-    else (return . head) potentPoses
-  
-rndStepO :: Table -> IO Pos 
+    else return $ snd (head steps)
+
+getBestSteps :: Table -> IO [(Price, Pos)]
+getBestSteps t = do
+  matr <- getElems t
+  let steps = getPricedSteps (findSamples matr)
+  return $ take 5 steps
+
+
+rndStepO :: Table -> IO Pos
 rndStepO t = do
    g0 <- initStdGen
-   let (a, g1) = uniformR (2, 7) g0 :: (Int, StdGen) 
-   let (b, g) = uniformR (2, 7) g1 :: (Int, StdGen) 
-   empty <- isCellEmpty t (a, b) 
-   if empty 
-     then return (a, b)  
+   let (a, g1) = uniformR (2, 7) g0 :: (Int, StdGen)
+   let (b, g) = uniformR (2, 7) g1 :: (Int, StdGen)
+   empty <- isCellEmpty t (a, b)
+   if empty
+     then return (a, b)
      else rndStepO t
 
 
 
-{-- 
-  знаходимо межі всіх зразків, впорядковані по зменшості ціни - findSamples
-  серед знайдених меж обираємо першу, яка припадає на вільне поле
-  ставимо в неї "о"                              
---}
 
 
