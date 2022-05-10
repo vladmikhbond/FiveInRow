@@ -97,20 +97,13 @@ findSample matr xs = let
   [ fromJust x |  x <- hor ++ ver ++ dia ++ aid, isJust x]
 
 
-getPotentPos :: (Pos, Pos, Sample) -> [Pos]     -- getPotentPos ((1, 5), (4, 2), "x x ")  ->  [(2,4),(4,2)]
-getPotentPos (p1, p2, sample) = 
+getPossStep :: (Pos, Pos, Sample) -> [Pos]     -- getPossStep ((1, 5), (4, 2), "x x ")  ->  [(2,4),(4,2)]
+getPossStep (p1, p2, sample) = 
   [p | (p, s) <- zip (interpol (p1, p2)) sample, s == ' ']
 
 
-
---   | r1 == r2  = [(r1, c) | (c, s) <- zip [c1..c2] sample, s == ' ']
---   | c1 == c2  = [(r, c1) | (r, s) <- zip [r1..r2] sample, s == ' ']
---   | otherwise = [(r, c)  | (r, c, s) <- zip3 [r1..r2] [c1, c1+dCol..c2] sample, s == ' ']
---  where 
---   dCol = signum (c2 - c1)
-
-getPotentPoses :: [(Pos, Pos, Sample)] -> [Pos]  -- getPotentPoses [((1, 5), (4, 2), "x x ")]  ->  [(2,4),(4,2)]
-getPotentPoses trios = concatMap getPotentPos trios
+getPossibleSteps :: [(Pos, Pos, Sample)] -> [Pos]  -- getPossibleSteps [((1, 5), (4, 2), "x x ")]  ->  [(2,4),(4,2)]
+getPossibleSteps trios = concatMap getPossStep trios
     
 isCellEmpty :: Table -> Pos -> IO Bool
 isCellEmpty table (r, c) = do
@@ -139,7 +132,7 @@ stepO t = do
   matr <- getElems t
 
   let trios = findSamples matr
-  let potentPoses = getPotentPoses trios
+  let potentPoses = getPossibleSteps trios
   if null potentPoses
     then rndStepO t
     else (return . head) potentPoses
