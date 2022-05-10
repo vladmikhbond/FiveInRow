@@ -3,6 +3,7 @@
 {-# HLINT ignore "Eta reduce" #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# HLINT ignore "Use mapM_" #-}
+{-# HLINT ignore "Use first" #-}
 
 
 module Lib (
@@ -10,7 +11,7 @@ module Lib (
  ) where
 
 import Control.Monad (sequence_, mapM_)
-import Data.Array.IO ( getElems, readArray, writeArray, MArray(newArray), IOArray )
+import Data.Array.IO --( getElems, readArray, writeArray, MArray(newArray), IOArray )
 import Data.Foldable (Foldable(foldl'))
 import Data.Time.Clock ( getCurrentTime, UTCTime(utctDayTime) )
 import Data.Maybe ( fromJust, isJust )
@@ -21,20 +22,21 @@ import Control.Concurrent ( threadDelay )
 import Data.List (sort)
 
 
-type Table = IOArray Int Char
+type Table = IOArray Int Val
 type Pos = (Int, Int)
-type Matr = [Char]
-type Sample = String
+type Matr = [Val]
+type Sample = [Val]
 type Price = Int
+type Val = Char    -- 'x', 'o', ' '
 _size = 10
 
-get :: Table -> Pos -> IO Char
-get table (i, j) = readArray table (i * _size + j)
+get :: Table -> Pos -> IO Val
+get table (r, c) = readArray table (r * _size + c)
 
-put :: Table -> Pos -> Char -> IO ()
-put table (i, j) = writeArray table (i * _size + j)
+put :: Table -> Pos -> Val -> IO ()
+put table (r, c) = writeArray table (r * _size + c)
 
-puts :: Table -> [Int] -> Char -> IO ()
+puts :: Table -> [Int] -> Val -> IO ()
 puts table ns v = mapM_ (\n -> put table (divMod n 10) v) ns
 
 newTable :: IO Table
@@ -54,24 +56,6 @@ insertSepByN n xs sep = let (zs, rs) = splitAt n xs
                in zs ++ [sep] ++ insertSepByN n rs sep
 
 ---------------------------------------------------------
--- _samples = [
---   " oooo", "o ooo", "oo oo", "ooo o", "oooo ",   -- 1000
---   " xxxx", "x xxx", "xx xx", "xxx x", "xxxx ",   --  999
-
---   " ooo ",                                       -- 100 
---   " xxx ",                                       --  99 
-
---   " ooo", "o oo", "oo o", "ooo ",                -- 50   
---   " xxx", "x xx"," xx x", "xxx ",                -- 49
-
---    " oo", "o o", "oo ",                            
---    " xx", "x x", "xx ",
-
---    " o", "o ",
---    " x", "x " 
-
---   ]
-
 _pricedSamples :: [([Sample], Price)]
 _pricedSamples = [
   ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 1000),
@@ -145,7 +129,7 @@ isCellEmpty table (r, c) = do
     else
       return False
 
-whoWon :: Table -> IO (Char, (Pos, Pos))  -- 'x', 'o', ' '
+whoWon :: Table -> IO (Val, (Pos, Pos))  
 whoWon t = do
    matr <- getElems t
    let xs = findSample matr "xxxxx"
@@ -171,18 +155,49 @@ whoWon t = do
 
 
 
-stepO :: Table -> IO Pos
-stepO t = do
-  steps <- getBestSteps t
+-- stepO :: Table -> IO Pos
+-- stepO t = do
+--   steps <- getBestStepsO t
+--   if null steps
+--     then rndStepO t
+--     else return $ snd (head steps)
+
+stepO :: Table -> Int -> IO Pos
+stepO t level = do
+  steps <- getBestSteps t 'o'
   if null steps
     then rndStepO t
-    else return $ snd (head steps)
+    else do
+      -- ts :: IO [Table] - таблицы со сделанными ходами 
+      let ts = mapM (\(_, pos) -> do {t' <- mapArray id t; put t' pos 'о'; return t'} ) steps 
 
-getBestSteps :: Table -> IO [(Price, Pos)]
-getBestSteps t = do
+      return $ snd (head steps)
+
+-- todo
+
+getBestSteps :: Table -> Val -> IO [(Price, Pos)]
+getBestSteps t 'o' = getBestStepsO t
+getBestSteps t 'x' = do
+    steps <- getBestStepsO t 
+    let steps' = map (\(price, pos) -> (f price, pos)) steps
+    return steps'
+ where 
+    f 1000 = 999
+    f 999 = 1000
+    f 100 = 99
+    f 99 = 100
+    f 50 = 49
+    f 49 = 50
+    f x = x
+tgetBestSteps t _ = error ""
+
+getBestStepsO :: Table -> IO [(Price, Pos)]
+getBestStepsO t = do
   matr <- getElems t
   let steps = getPricedSteps (findSamples matr)
   return $ take 5 steps
+
+
 
 
 rndStepO :: Table -> IO Pos

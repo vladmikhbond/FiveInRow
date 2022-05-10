@@ -39,14 +39,14 @@ twoMoves t nn = do
     then run t
     else do
       put t posX 'x'
-      hilightPos t 'x' posX     ------------
+      hilightPos t 'x' posX   
       who <- whoWon t
       if fst who == 'x'
         then epilog t who
         else do
-          posO <- stepO t
+          posO <- stepO t 0   --------------
           put t posO 'o'
-          hilightPos t 'o' posO    ------------
+          hilightPos t 'o' posO  
           who <- whoWon t
           if fst who == 'o'
             then epilog t who
