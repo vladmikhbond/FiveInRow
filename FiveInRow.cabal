@@ -28,6 +28,7 @@ library
       Consul
       Draw
       Lib
+      Lib2
   other-modules:
       Paths_FiveInRow
   hs-source-dirs:

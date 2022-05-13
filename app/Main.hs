@@ -4,7 +4,7 @@ module Main where
 import Data.Array.IO ()
 import Control.Monad ( when )
 import Text.Read ( readMaybe )
-import Lib
+import Lib2
 import Consul
 import Draw
 import System.IO ( hFlush, stdout )
@@ -15,7 +15,7 @@ main = do
   -- puts t [01,03,05,07] 'x'
   -- puts t [45,55, 65,75] 'o'
   putStr clrscr
-  drawTable t
+  drawTable t 
   run t
 
 -------------------------------------------------------
@@ -44,7 +44,8 @@ twoMoves t nn = do
       if fst who == 'x'
         then epilog t who
         else do
-          (_, posO) <- nextStep 'o' t 0   --------------
+          poses <- nextSteps 'o' t 2  -- <<<<<<<<<<<<<<<<<
+          let posO = snd $ head poses
           put t posO 'o'
           hilightPos t 'o' posO  
           who <- whoWon t
