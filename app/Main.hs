@@ -9,6 +9,7 @@ import Consul
 import Draw
 import System.IO ( hFlush, stdout )
 
+
 main :: IO ()
 main = do
   t <- newTable
@@ -44,7 +45,7 @@ twoMoves t nn = do
       if fst who == 'x'
         then epilog t who
         else do
-          poses <- nextSteps 'o' t 2  -- <<<<<<<<<<<<<<<<<
+          poses <- nextSteps 'o' t _DEEP  -- <<<<<<<<<<<<<<<<<
           let posO = snd $ head poses
           put t posO 'o'
           hilightPos t 'o' posO  

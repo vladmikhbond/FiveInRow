@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Move brackets to avoid $" #-}
 module Test where
 
 import Control.Monad (sequence_, mapM_)
@@ -37,7 +39,7 @@ t3 = do
   putStrLn $ norm ++ showCur
   return t
 
-__pwp prompt x =  print $ prompt ++ show x
+__pwp prompt x =  putStrLn ("---" ++ prompt ++"  "++ show x ++ " >") >> getLine >> return ()
 
 -- findSamples --------- поиск образцов 
 
@@ -45,32 +47,41 @@ test0 :: IO Table -> IO ()
 test0 table = do
   t <- table
   matr <- getElems t 
-  let samplesO = findSamplesT 'o' matr
-  __pwp "samples finded by o " samplesO
-  let samplesX = findSamplesT 'x' matr
-  __pwp "samples finded by x " samplesX
+  let samples1 = findSamplesS 'o' matr
+  __pwp "samples finded by o " samples1
+  let samples2 = findSamplesS 'x' matr
+  __pwp "samples finded by x " samples2
+ 
+-- selStepsOnTable -- выбор подходящих ходов из заданной таблицы 
+
+test1 table = do
+  t <- table
+  steps1 <- selStepsOnTable 'o' t
+  __pwp "steps on table for O" steps1
+  steps2 <- selStepsOnTable 'x' t
+  __pwp "steps on table for X" steps2
   
 
 -- priceTableAfterStep -- оценка таблицы после сделанного хода 
 
-test1 table = do
+test2 table = do
   t <- table
   priceX <- priceTableAfterStep 'x' t
   __pwp "ater X step " priceX
   priceO <- priceTableAfterStep 'o' t
   __pwp "ater O step " priceO
 
--- selStepsOnTable -- выбор походящих ходов из заданной таблицы 
-
-test2 table = do
-  t <- table
-  steps <- selStepsOnTable 'o' t
-  __pwp "steps on table " steps
-
----------------------------------------------
-
 test3 table = do
   t <- table
-  steps <- nextSteps 'o' t 1 
-  __pwp "steps on table " steps
+  tables <- mapM (getNextTable 'o' t) [(0, (0,0)), (0, (1,1)) ]
+  drawTable (head tables)
+  __pwp "getNextTable of O" ""
+
+
+
+test4 lev table = do
+  t <- table
+  steps <- nextSteps 'o' t lev 
+  __pwp "steps O on table " steps
+
 

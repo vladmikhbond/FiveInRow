@@ -36,8 +36,10 @@ hilightWin table (who, segment) = do
 hilightPos :: Table -> Char -> Pos -> IO ()
 hilightPos t who (r, c) = do
   putStr $ rc r' c' ++ hideCur ++ colorB ++ color ++ sym
+  hFlush stdout
   threadDelay 200000
   putStr $ rc r' c' ++ blackB ++ color ++ sym 
+  hFlush stdout
  where 
     r' = r + 2
     c' = c * 3 + 4

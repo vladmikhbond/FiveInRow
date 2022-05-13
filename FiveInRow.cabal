@@ -27,7 +27,6 @@ library
   exposed-modules:
       Consul
       Draw
-      Lib
       Lib2
   other-modules:
       Paths_FiveInRow
