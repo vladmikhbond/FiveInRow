@@ -17,8 +17,8 @@ drawTable table = do
 drawCell :: [Char] -> Int -> Int -> IO ()
 drawCell cs row col
   | c == '\n' = putStrLn (rc row' col')
-  | c == 'x'  = putStr $ rc row' (col'+1) ++ green  ++ _cross
-  | c == 'o'  = putStr $ rc row' (col'+1) ++ red ++ _zero
+  | c == 'x'  = putStr $ rc row' (col'+1) ++ red ++ _cross
+  | c == 'o'  = putStr $ rc row' (col'+1) ++ green ++ _zero
   | otherwise = putStr $ rc row' (col'+1) ++ gray ++ show row ++ show col
   where
     i = _size * row + col

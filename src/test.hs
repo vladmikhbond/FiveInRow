@@ -56,9 +56,9 @@ test0 table = do
 
 test1 table = do
   t <- table
-  steps1 <- selStepsOnTable 'o' t
+  steps1 <- selStepsOnTable 'o' t 5
   __pwp "steps on table for O" steps1
-  steps2 <- selStepsOnTable 'x' t
+  steps2 <- selStepsOnTable 'x' t 5
   __pwp "steps on table for X" steps2
   
 

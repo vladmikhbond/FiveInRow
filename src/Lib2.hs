@@ -6,12 +6,13 @@
 {-# HLINT ignore "Use first" #-}
 {-# HLINT ignore "Use tuple-section" #-}
 {-# HLINT ignore "Use when" #-}
+{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 
 module Lib2 (
   _size, interpolation, put, puts,  newTable,
   priceTableAfterStep, selStepsOnTable, findSamplesS, findSamplesT,
-  randomStep, nextSteps, isCellEmpty, whoWon, _DEEP, getNextTable,
-  Table, Pos,  Matr, Sample, Price, Val, Level
+  randomStep, nextSteps, isCellEmpty, whoWon, getNextTable,
+  Table, Pos,  Matr, Sample, Price, Val, Level, Width, Settings
  ) where
 
 import Control.Monad (sequence_, mapM_)
@@ -25,18 +26,20 @@ import System.IO ( hFlush, stdout )
 import Control.Concurrent ( threadDelay )
 import Data.List (sort, nub, nubBy)
 
-
 type Table = IOArray Int Val
 type Pos = (Int, Int)
 type Matr = [Val]
 type Sample = [Val]
 type Price = Int
 type Val = Char    -- 'x', 'o', ' '
-type Level = Int   -- 0, 1, 2, 3
+type Level = Int   -- 0..4
+type Width = Int
+type Settings = (Level, Width)
+
 _size = 10
 
-_WIDTH = 5
-_DEEP = 3 :: Level
+-- _WIDTH = 5
+-- _DEEP = 2 :: Level
 __debug = False
 
 get :: Table -> Pos -> IO Val
@@ -91,13 +94,19 @@ swapXO cs = map f cs where
   f 'o' = 'x'
   f c = c
 
+__pwp prompt x = if __debug
+   then putStrLn ("---" ++ prompt ++"  "++ show x ++ " >") >> getLine >> return ()
+   else return ()
+
 ------------ образцы -------------------------------------------
 
 -- samplesOs -- для оценки перспективности хода 'o'
 _samplesOs :: [([Sample], Price)]
 _samplesOs = [
-  ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 10),
+  ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 10), 
   ([" xxxx", "x xxx", "xx xx", "xxx x", "xxxx "], 9),
+  
+  (["  ooo", "ooo  "], 8),
 
   ([" ooo", "o oo", "oo o", "ooo "], 8),
   ([" xxx", "x xx", "xx x", "xxx "], 7),
@@ -105,24 +114,6 @@ _samplesOs = [
   ([" xx", "x x", "xx "], 5),
   ([" o", "o "], 4),
   ([" x", "x "], 3)
-  ]
-
--- samplesOs -- для оценки таблицы после хода 'o'
-_samplesOt :: [([Sample], Price)]
-_samplesOt = [
-  (["ooooo"], 10^6),  
-  ([" xxxx "], -10^6),   
-  
-  ([" oooo "], 10^5),     
-  ([" xxxx", "x xxx", "xx xx", "xxx x", "xxxx "], -10^5), -- 'x' win in 1 step 
-
-  ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 1000),   -- 'o' win in 1 step
-
-  (["  xxx", " x xx", " xx x", " xxx ", "x  xx", "x x x", "x xx ", "xx x ", "xxx  " ], -100), -- 'x' win in 2 steps  
-  (["  ooo", " o oo", " oo o", " ooo ", "o  oo", "o o o", "o oo ", "oo o ", "ooo  " ], 100),   -- 'o' win in 2 steps
-
-  (["xx   ", "x x  ", "x  x ", "x   x", " xx  ", " x x ", " x  x", "  x x", "   xx" ], -10),  -- 'x' win in 3 steps  
-  (["oo   ", "o o  ", "o  o ", "o   o", " oo  ", " o o ", " o  o", "  o o", "   oo" ], 10)     -- 'o' win in 3 steps  
   ]
 
 _samplesS :: Val -> [(Sample, Price)]
@@ -133,6 +124,28 @@ _samplesS val = let
   if val == 'o'
    then pairs
    else map (\(s, p) -> (swapXO s, p)) pairs
+
+-- samplesOs -- для оценки таблицы после хода 'o'
+_samplesOt :: [([Sample], Price)]
+_samplesOt = [
+  (["ooooo"], 10^8), 
+
+  ([" xxxx "], -10^7),    
+  ([" oooo "], 10^6),     
+
+  ([" xxxx", "x xxx", "xx xx", "xxx x", "xxxx "], -10^5), -- 'x' win in 1 step 
+  ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 10^4),   -- 'o' win in 1 step
+
+  ([" x xx ", " xx x "], -10^3),                          -- 'x' fork in 1 step
+  ([" o oo ", " oo o "], 10^2),                           -- 'o' fork in 1 step
+  
+  
+  (["  xxx", " x xx", " xx x", " xxx ", "x  xx", "x x x", "x xx ", "xx x ", "xxx  " ], -10), -- 'x' win in 2 steps  
+  (["  ooo", " o oo", " oo o", " ooo ", "o  oo", "o o o", "o oo ", "oo o ", "ooo  " ], 1)   -- 'o' win in 2 steps
+
+  --(["xx   ", "x x  ", "x  x ", "x   x", " xx  ", " x x ", " x  x", "  x x", "   xx" ], -10),  -- 'x' win in 3 steps  
+  --(["oo   ", "o o  ", "o  o ", "o   o", " oo  ", " o o ", " o  o", "  o o", "   oo" ], 10)     -- 'o' win in 3 steps  
+  ]
 
 _samplesT :: Val -> [(Sample, Price)]
 _samplesT val = let
@@ -186,32 +199,30 @@ priceTableAfterStep v t = do
 
 --------- выбор подходящих ходов v из заданной таблицы ------------------
 
-selStepsOnTable :: Val -> Table -> IO [(Price, Pos)]
-selStepsOnTable v t = do
+selStepsOnTable :: Val -> Table -> Width -> IO [(Price, Pos)]
+selStepsOnTable v t width = do
   matr <- getElems t
   let samples = findSamples v (_samplesS v) matr  :: [((Pos, Pos), Sample, Price)]
   if null samples
     then randomStep v t
     else return $ getPricedSteps samples
+ where
+    getPricedSteps :: [((Pos, Pos), Sample, Price)] -> [(Price, Pos)]
+                -- ps =  [(10,(8,5)),(10,(3,5))]
+    getPricedSteps ps = (take width . nubBy (\a b -> snd a == snd b).reverse . sort) ps'
+      where
+    -- ps' = [(10,(3,5)),(8,(8,5)),(10,(8,5)),(6,(8,5)),(8,(3,5))]"
+        ps' = concatMap pricedStep ps :: [(Price, Pos)]
+        pricedStep :: ((Pos, Pos), Sample, Price) -> [(Price, Pos)]
+        pricedStep ((pos1, pos2), sample, price) =
+          [(price, pos) | (pos, s) <- zip (interpolation (pos1, pos2)) sample, s == ' ']
 
-getPricedSteps :: [((Pos, Pos), Sample, Price)] -> [(Price, Pos)]
-            -- ps =  [(10,(8,5)),(10,(3,5))]
-getPricedSteps ps = (take _WIDTH . nubBy (\a b -> snd a == snd b).reverse . sort) ps'
-  where
- -- ps' = [(10,(3,5)),(8,(8,5)),(10,(8,5)),(6,(8,5)),(8,(3,5))]"
-    ps' = concatMap pricedStep ps :: [(Price, Pos)]
-    pricedStep :: ((Pos, Pos), Sample, Price) -> [(Price, Pos)]
-    pricedStep ((pos1, pos2), sample, price) =
-      [(price, pos) | (pos, s) <- zip (interpolation (pos1, pos2)) sample, s == ' ']
-__pwp prompt x = if __debug
-   then putStrLn ("---" ++ prompt ++"  "++ show x ++ " >") >> getLine >> return ()
-   else return ()
 --------------------------------------------------------------
 
 -- несколько варианов лучшего хода игрока
-nextSteps :: Val -> Table -> Level -> IO [(Price, Pos)]
-nextSteps v table 0 = do
-  steps <- selStepsOnTable v table :: IO [(Price, Pos)]
+nextSteps :: Val -> Table -> Settings -> IO [(Price, Pos)]
+nextSteps v table (0, width) = do
+  steps <- selStepsOnTable v table width :: IO [(Price, Pos)]
 
   if fst (head steps) == 10
     then return steps            -- есть выигрышный ход
@@ -228,8 +239,8 @@ nextSteps v table 0 = do
 
 -- несколько вариантов лучшего хода игрока
 
-nextSteps v table level = do
-  steps <- selStepsOnTable v table :: IO [(Price, Pos)]
+nextSteps v table (level, width)  = do
+  steps <- selStepsOnTable v table width:: IO [(Price, Pos)]
   __pwp ("steps level " ++ show level) steps
   if fst (head steps) == 10
    then return steps            -- есть выигрышный ход
@@ -237,7 +248,7 @@ nextSteps v table level = do
     -- tables - список таблиц со сделанными ходами 
     tables <- mapM (getNextTable v table) steps  :: IO [Table]
     let v' = if v == 'o' then 'x' else 'o'
-    let f t = nextSteps v' t (level-1) :: IO [(Price, Pos)]
+    let f t = nextSteps v' t (level - 1, width) :: IO [(Price, Pos)]
     let contrStep t = head <$> (reverse . sort <$> f t) :: IO (Price, Pos)
     -- лучшие ходы противника из всех таблиц tables
     contrSteps <- mapM contrStep tables :: IO [(Price, Pos)]
