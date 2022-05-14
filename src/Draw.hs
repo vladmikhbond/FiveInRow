@@ -1,7 +1,7 @@
 module Draw (drawTable, hilightWin, hilightPos) where
 import Data.Array.IO ( getElems, readArray, writeArray, MArray(newArray), IOArray )
 import Consul
-import System.IO ( hFlush, stdout )
+
 import Control.Concurrent ( threadDelay )
 import Lib
 _cross = "><"
@@ -35,11 +35,9 @@ hilightWin table (who, segment) = do
 
 hilightPos :: Table -> Char -> Pos -> IO ()
 hilightPos t who (r, c) = do
-  putStr $ rc r' c' ++ hideCur ++ colorB ++ color ++ sym
-  hFlush stdout
+  putStr' $ rc r' c' ++ hideCur ++ colorB ++ color ++ sym
   threadDelay 200000
-  putStr $ rc r' c' ++ blackB ++ color ++ sym 
-  hFlush stdout
+  putStr' $ rc r' c' ++ blackB ++ color ++ sym 
  where 
     r' = r + 2
     c' = c * 3 + 4

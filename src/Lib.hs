@@ -86,10 +86,15 @@ insertSepByN n [] sep = []
 insertSepByN n xs sep = let (zs, rs) = splitAt n xs
                in zs ++ [sep] ++ insertSepByN n rs sep
 
-swapXO cs = map f cs where
-  f 'x' = 'o'
-  f 'o' = 'x'
-  f c = c
+swapXO cs = [case c of {'x' -> 'o'; 'o' -> 'x'; c -> c } | c <- cs] 
+eraseDots cs = [case c of {'.' -> ' '; c -> c } | c <- cs] 
+
+  --  map f cs where
+  -- f 'x' = 'o'
+  -- f 'o' = 'x'
+  -- f c = c
+
+
 
 __pwp prompt x = if __debug
    then putStrLn ("---" ++ prompt ++"  "++ show x ++ " >") >> getLine >> return ()
@@ -97,7 +102,7 @@ __pwp prompt x = if __debug
 
 ------------ образцы -------------------------------------------
 
--- samplesOs -- для оценки перспективности хода 'o'
+----------------- samplesOs -- для оценки перспективности хода 'o'
 _samplesOs :: [([Sample], Price)]
 _samplesOs = [
   ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 10), 
@@ -122,7 +127,7 @@ _samplesS val = let
    then pairs
    else map (\(s, p) -> (swapXO s, p)) pairs
 
--- samplesOs -- для оценки таблицы после хода 'o'
+------------------ samplesOs -- для оценки таблицы после хода 'o'
 _samplesOt :: [([Sample], Price)]
 _samplesOt = [
   (["ooooo"], 10^8), 

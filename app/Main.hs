@@ -44,8 +44,8 @@ twoMoves t settings posXint = do
       if fst winer == 'x'
         then epilog t winer
         else do
-          poses <- nextSteps 'o' t settings  -- <<<<<<<<<<<<<<<<<
-          let posO = snd $ head poses
+          positionsO <- nextSteps 'o' t settings  -- <<<<<<<<<<<<<<<<<
+          let posO = snd $ head positionsO
           put t posO 'o'
           hilightPos t 'o' posO
           logStep 'o' posO
@@ -54,8 +54,8 @@ twoMoves t settings posXint = do
             then epilog t winer
             else run t settings
 
-epilog t winer = do
-  hilightWin t winer
+epilog table winer = do
+  hilightWin table winer
   putStr' $ norm ++ rc 12 0 ++ showCur ++  "Continue ? [y], n >"
   ans <- getLine
   when (ans /= "n") main

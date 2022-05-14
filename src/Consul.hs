@@ -36,7 +36,7 @@ down n = "\27["++ show n ++"B"
 forward n = "\27["++ show n ++"C"
 back n = "\27["++ show n ++"D"
 
--- 
+-- utilities ----------------------------------
 putStr' str = putStr str >> hFlush stdout
 
 
