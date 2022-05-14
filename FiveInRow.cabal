@@ -27,7 +27,9 @@ library
   exposed-modules:
       Consul
       Draw
-      Lib2
+      Lib
+      Test
+      Trace
   other-modules:
       Paths_FiveInRow
   hs-source-dirs:

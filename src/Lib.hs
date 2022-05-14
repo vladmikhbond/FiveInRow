@@ -8,7 +8,7 @@
 {-# HLINT ignore "Use when" #-}
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 
-module Lib2 (
+module Lib (
   _size, interpolation, put, puts,  newTable,
   priceTableAfterStep, selStepsOnTable, findSamplesS, findSamplesT,
   randomStep, nextSteps, isCellEmpty, whoWon, getNextTable,
@@ -22,7 +22,6 @@ import Data.Time.Clock ( getCurrentTime, UTCTime(utctDayTime) )
 import Data.Maybe ( fromJust, isJust )
 import System.Random ( initStdGen, uniformR, StdGen )
 import Consul
-import System.IO ( hFlush, stdout )
 import Control.Concurrent ( threadDelay )
 import Data.List (sort, nub, nubBy)
 
@@ -38,8 +37,6 @@ type Settings = (Level, Width)
 
 _size = 10
 
--- _WIDTH = 5
--- _DEEP = 2 :: Level
 __debug = False
 
 get :: Table -> Pos -> IO Val

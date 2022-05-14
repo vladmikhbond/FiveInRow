@@ -2,19 +2,11 @@
 {-# HLINT ignore "Move brackets to avoid $" #-}
 module Test where
 
-import Control.Monad (sequence_, mapM_)
-import Data.Array.IO --( getElems, readArray, writeArray, MArray(newArray), IOArray )
-import Data.Foldable (Foldable(foldl'))
-import Data.Time.Clock ( getCurrentTime, UTCTime(utctDayTime) )
-import Data.Maybe ( fromJust, isJust )
-import System.Random ( initStdGen, uniformR, StdGen )
-import System.IO ( hFlush, stdout )
-import Control.Concurrent ( threadDelay )
-import Data.List (sort)
+import Data.Array.IO 
 import Consul
 import Draw
-import Lib2
-
+import Lib
+-------------- Tables -----------------------------
 t1 = do
   t <- newTable
   puts t [45,55,65,75] 'o'
@@ -39,6 +31,7 @@ t3 = do
   putStrLn $ norm ++ showCur
   return t
 
+--------------- Tests ----------------------------------------
 __pwp prompt x =  putStrLn ("---" ++ prompt ++"  "++ show x ++ " >") >> getLine >> return ()
 
 -- findSamples --------- поиск образцов 

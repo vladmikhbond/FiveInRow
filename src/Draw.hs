@@ -3,7 +3,7 @@ import Data.Array.IO ( getElems, readArray, writeArray, MArray(newArray), IOArra
 import Consul
 import System.IO ( hFlush, stdout )
 import Control.Concurrent ( threadDelay )
-import Lib2
+import Lib
 _cross = "><"
 _zero = "<>"
 
