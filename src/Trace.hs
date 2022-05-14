@@ -17,8 +17,9 @@ logStep v (r, c) = do
   hPutStr h $ v : show (r * 10 + c)
   hClose h
 
-logNew = do
+logNew (level, width) = do
   h <- openFile _LOG_TXT WriteMode
+  hPutStr h $ show level ++ show width
   hClose h
 
 loadFromLog :: IO (Settings, Table)

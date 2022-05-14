@@ -15,9 +15,10 @@ main = do
   -----
   --(settings, table) <- loadFromLog
   -----
-  logNew
-  table <- newTable
   let settings = (2, 9)
+  logNew settings
+  table <- newTable
+
   -----
   putStr clrscr
   drawTable table
@@ -44,7 +45,7 @@ twoMoves t settings posXint = do
     else do
       put t posX 'x'
       hilightPos t 'x' posX
-      --logStep 'x' posX
+      logStep 'x' posX
       winer <- whoWon t
       if fst winer == 'x'
         then epilog t winer
@@ -53,7 +54,7 @@ twoMoves t settings posXint = do
           let posO = snd $ head positionsO
           put t posO 'o'
           hilightPos t 'o' posO
-          --logStep 'o' posO
+          logStep 'o' posO
           winer <- whoWon t
           if fst winer == 'o'
             then epilog t winer
