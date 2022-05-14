@@ -103,15 +103,18 @@ __pwp prompt x = if __debug
 ------------ образцы -------------------------------------------
 
 ----------------- samplesOs -- для оценки перспективности хода 'o'
+-- точка запрещает ход в данную позицию
+
 _samplesOs :: [([Sample], Price)]
 _samplesOs = [
   ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 10), 
   ([" xxxx", "x xxx", "xx xx", "xxx x", "xxxx "], 9),
-  
-  (["  ooo", "ooo  "], 8),
 
-  ([" ooo", "o oo", "oo o", "ooo "], 8),
-  ([" xxx", "x xx", "xx x", "xxx "], 7),
+   ([" xxx", "x xx", "xx x", "xxx "], 8),
+ 
+  ([". ooo", "ooo ."], 7),
+  ([" ooo", "o oo", "oo o", "ooo "], 7),
+  
   ([" oo", "o o", "oo "], 6),
   ([" xx", "x x", "xx "], 5),
   ([" o", "o "], 4),
@@ -128,15 +131,15 @@ _samplesS val = let
    else map (\(s, p) -> (swapXO s, p)) pairs
 
 ------------------ samplesOs -- для оценки таблицы после хода 'o'
+
 _samplesOt :: [([Sample], Price)]
 _samplesOt = [
   (["ooooo"], 10^8), 
 
   ([" xxxx "], -10^7),    
-  ([" oooo "], 10^6),     
-
   ([" xxxx", "x xxx", "xx xx", "xxx x", "xxxx "], -10^5), -- 'x' win in 1 step 
-  ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 10^4),   -- 'o' win in 1 step
+  ([" oooo "], 10^4),
+  ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 10^3),   -- 'o' win in 1 step
 
   ([" x xx ", " xx x "], -10^3),                          -- 'x' fork in 1 step
   ([" o oo ", " oo o "], 10^2),                           -- 'o' fork in 1 step
@@ -179,14 +182,17 @@ findSample matr xs = let
   dia = [diaEq r c | r <- [0.._size-n], c <- [0.._size-n] ]
   aid = [aidEq r c | r <- [0.._size-n], c <- [n-1.._size-1] ]
 
-  horEq r c = if [val r (c+i)     | i <- [0..n-1]] /= xs then Nothing
+  horEq r c = if [f $ val r (c+i)     | i <- [0..n-1]] /= xs then Nothing
     else Just ((r, c), (r, c+n-1))
-  verEq r c = if [val (r+i) c     | i <- [0..n-1]] /= xs then Nothing
+  verEq r c = if [f $ val (r+i) c     | i <- [0..n-1]] /= xs then Nothing
     else Just ((r, c), (r+n-1, c))
-  diaEq r c = if [val (r+i) (c+i) | i <- [0..n-1]] /= xs then Nothing
+  diaEq r c = if [f $ val (r+i) (c+i) | i <- [0..n-1]] /= xs then Nothing
     else Just ((r, c), (r+n-1, c+n-1))
-  aidEq r c = if [val (r+i) (c-i) | i <- [0..n-1]] /= xs then Nothing
+  aidEq r c = if [f $ val (r+i) (c-i) | i <- [0..n-1]] /= xs then Nothing
     else Just ((r, c), (r+n-1, c-n+1))
+
+  f x = case x of {'.' -> ' '; x -> x}  
+
  in
   [ fromJust x |  x <- hor ++ ver ++ dia ++ aid, isJust x]
 

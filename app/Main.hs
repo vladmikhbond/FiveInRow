@@ -12,12 +12,17 @@ import Trace
 ------------------------------------------------------
 main :: IO ()
 main = do
-  -- t <- newTable
-  -- logNew
-  t <- loadFromLog
+  -----
+  --(settings, table) <- loadFromLog
+  -----
+  logNew
+  table <- newTable
+  let settings = (2, 9)
+  -----
   putStr clrscr
-  drawTable t
-  run t (2, 5)
+  drawTable table
+  run table settings
+
 -------------------------------------------------------
 run :: Table -> Settings -> IO ()
 run t d_w = do
@@ -39,16 +44,16 @@ twoMoves t settings posXint = do
     else do
       put t posX 'x'
       hilightPos t 'x' posX
-      logStep 'x' posX
+      --logStep 'x' posX
       winer <- whoWon t
       if fst winer == 'x'
         then epilog t winer
         else do
-          positionsO <- nextSteps 'o' t settings  -- <<<<<<<<<<<<<<<<<
+          positionsO <- nextSteps 'o' t settings 
           let posO = snd $ head positionsO
           put t posO 'o'
           hilightPos t 'o' posO
-          logStep 'o' posO
+          --logStep 'o' posO
           winer <- whoWon t
           if fst winer == 'o'
             then epilog t winer

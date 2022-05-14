@@ -21,15 +21,17 @@ logNew = do
   h <- openFile _LOG_TXT WriteMode
   hClose h
 
+loadFromLog :: IO (Settings, Table)
 loadFromLog = do
   line <- readFile _LOG_TXT
-  let vps = f line
+  let (d : w : rest) = line
+  let valPoses = f rest
   t <- newTable
-  mapM_ (g t) vps
-  return t
+  mapM_ (g t) valPoses
+  return ((read [d], read [w]), t)
  where
-  g t (v, (r, c)) = put t (r, c) v
-
   f :: [Char] -> [(Val,Pos)]
   f (v : r : c : rest) = (v, (read [r], read [c])) : f rest
   f _ = []
+
+  g t (v, (r, c)) = put t (r, c) v
