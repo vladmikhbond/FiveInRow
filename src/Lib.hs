@@ -132,13 +132,15 @@ _samplesOt = [
   (["ooooo"], 10^8), 
 
   ([" xxxx "], -10^7),    
-  ([" xxxx", "x xxx", "xx xx", "xxx x", "xxxx "], -10^5), -- 'x' win in 1 step 
-  ([" oooo "], 10^4),
-  ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 10^3),   -- 'o' win in 1 step
+  ([" xxxx", "x xxx", "xx xx", "xxx x", "xxxx "], -10^6), -- 'x' win in 1 step 
+  ([" x xx ", " xx x ", " xxx "], -10^5 * 5),      
 
-  ([" x xx ", " xx x "], -10^3),                          -- 'x' fork in 1 step
+  ([" oooo "], 10^5),
+  ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 10^4),   -- 'o' win in 1 step
+  ([" o oo ", " oo o ", " ooo "], -10^3 * 5),
+
+  ([" x xx ", " xx x ", " xxx "], -10^3),                          -- 'x' fork in 1 step
   ([" o oo ", " oo o "], 10^2),                           -- 'o' fork in 1 step
-  
   
   (["  xxx", " x xx", " xx x", " xxx ", "x  xx", "x x x", "x xx ", "xx x ", "xxx  " ], -10), -- 'x' win in 2 steps  
   (["  ooo", " o oo", " oo o", " ooo ", "o  oo", "o o o", "o oo ", "oo o ", "ooo  " ], 1)   -- 'o' win in 2 steps
