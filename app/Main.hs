@@ -8,17 +8,20 @@ import Consul
 import Draw
 import System.IO
     ( hClose, hPutStr, openFile, IOMode(AppendMode, WriteMode) )
-import Trace 
+import System.Environment (getArgs)
+import Trace
 ------------------------------------------------------
 main :: IO ()
 main = do
   -----
-  --(settings, table) <- loadFromLog
-  -----
-  let settings = (2, 9)
+  args <- getArgs
+  let settings = if length args < 2 
+                  then (1, 9) 
+                  else (read (head args), read (args !! 1)  )
   logNew settings
   table <- newTable
-
+  -----
+  -- (settings, table) <- loadFromLog
   -----
   putStr clrscr
   drawTable table
@@ -27,7 +30,7 @@ main = do
 -------------------------------------------------------
 run :: Table -> Settings -> IO ()
 run t d_w = do
-  putStr' $ norm ++ rc 12 0 ++ showCur ++ "("++ show (fst d_w) ++" "++ show (snd d_w) ++") q-quit >"
+  putStr' $ norm ++ rc 22 0 ++ showCur ++ "("++ show (fst d_w) ++" "++ show (snd d_w) ++") q-quit >"
 
   line <- getLine
   when ('q' `notElem` line)  (do
@@ -50,7 +53,7 @@ twoMoves t settings posXint = do
       if fst winer == 'x'
         then epilog t winer
         else do
-          positionsO <- nextSteps 'o' t settings 
+          positionsO <- nextSteps 'o' t settings
           let posO = snd $ head positionsO
           put t posO 'o'
           hilightPos t 'o' posO
@@ -62,7 +65,7 @@ twoMoves t settings posXint = do
 
 epilog table winer = do
   hilightWin table winer
-  putStr' $ norm ++ rc 12 0 ++ showCur ++  "Continue ? [y], n >"
+  putStr' $ norm ++ rc 22 0 ++ showCur ++  "Continue ? [y], n >"
   ans <- getLine
   when (ans /= "n") main
 

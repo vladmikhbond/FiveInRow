@@ -64,17 +64,11 @@ test2 table = do
   priceO <- priceTableAfterStep 'o' t
   __pwp "ater O step " priceO
 
-test3 table = do
+
+
+test3 lev table = do
   t <- table
-  tables <- mapM (getNextTable 'o' t) [(0, (0,0)), (0, (1,1)) ]
-  drawTable (head tables)
-  __pwp "getNextTable of O" ""
-
-
-
-test4 lev table = do
-  t <- table
-  steps <- nextSteps 'o' t lev 
+  steps <- nextSteps 'o' t (lev,  5) 
   __pwp "steps O on table " steps
 
 
