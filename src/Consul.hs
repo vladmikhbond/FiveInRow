@@ -40,4 +40,5 @@ back n = "\27["++ show n ++"D"
 -- utilities ----------------------------------
 putStr' str = putStr str >> hFlush stdout
 
-
+__trace :: Show a => [Char] -> a -> IO ()
+__trace prompt x =  putStrLn ("---" ++ prompt ++"  "++ show x ++ " >") >> getLine >> return ()

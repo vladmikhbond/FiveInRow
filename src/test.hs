@@ -6,14 +6,14 @@ import Data.Array.IO
 import Consul
 import Draw
 import Lib
+import Trace ( load)
 -------------- Tables -----------------------------
 t1 = do
-  t <- newTable
-  puts t [45,55,65,75] 'o'
+  (s, t) <- load "test/t1.txt"
   putStr clrscr
   drawTable t
   putStrLn $ norm ++ showCur
-  return t
+  return (s, t)
 
 t2 = do
   t <- newTable
@@ -32,7 +32,7 @@ t3 = do
   return t
 
 --------------- Tests ----------------------------------------
-__pwp prompt x =  putStrLn ("---" ++ prompt ++"  "++ show x ++ " >") >> getLine >> return ()
+
 
 -- findSamples --------- поиск образцов 
 
@@ -41,18 +41,18 @@ test0 table = do
   t <- table
   matr <- getElems t 
   let samples1 = findSamplesS 'o' matr
-  __pwp "samples finded by o " samples1
+  __trace "samples finded by o " samples1
   let samples2 = findSamplesS 'x' matr
-  __pwp "samples finded by x " samples2
+  __trace "samples finded by x " samples2
  
 -- selStepsOnTable -- выбор подходящих ходов из заданной таблицы 
 
 test1 table = do
-  t <- table
+  (s, t) <- table
   steps1 <- selStepsOnTable 'o' t 5
-  __pwp "steps on table for O" steps1
+  __trace "selStepsOnTable 'o'" steps1
   steps2 <- selStepsOnTable 'x' t 5
-  __pwp "steps on table for X" steps2
+  __trace "selStepsOnTable 'x'" steps2
   
 
 -- priceTableAfterStep -- оценка таблицы после сделанного хода 
@@ -60,15 +60,17 @@ test1 table = do
 test2 table = do
   t <- table
   priceX <- priceTableAfterStep 'x' t
-  __pwp "ater X step " priceX
+  __trace "ater X step " priceX
   priceO <- priceTableAfterStep 'o' t
-  __pwp "ater O step " priceO
+  __trace "ater O step " priceO
 
 
 
-test3 lev table = do
-  t <- table
-  steps <- nextSteps 'o' t (lev,  5) 
-  __pwp "steps O on table " steps
+test3 table level = do
+  (s, t) <- table
+  stepsO <- nextSteps 'o' t (level,  5) 
+  __trace "nextSteps O on table " stepsO
+  stepsX <- nextSteps 'x' t (level,  5) 
+  __trace "nextSteps X on table " stepsX
 
 

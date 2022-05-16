@@ -86,14 +86,14 @@ insertSepByN n [] sep = []
 insertSepByN n xs sep = let (zs, rs) = splitAt n xs
                in zs ++ [sep] ++ insertSepByN n rs sep
 
-swapXO cs = [case c of {'x' -> 'o'; 'o' -> 'x'; c -> c } | c <- cs] 
-eraseDots cs = [case c of {'.' -> ' '; c -> c } | c <- cs] 
+swapXO cs = [case c of {'x' -> 'o'; 'o' -> 'x'; c -> c } | c <- cs]
+eraseDots cs = [case c of {'.' -> ' '; c -> c } | c <- cs]
 contra v = case v of {'x' -> 'o'; 'o' -> 'x'}
 
 
-__pwp prompt x = if __debug
-   then putStrLn ("---" ++ prompt ++"  "++ show x ++ " >") >> getLine >> return ()
-   else return ()
+-- __pwp prompt x = if __debug
+--    then putStrLn ("---" ++ prompt ++"  "++ show x ++ " >") >> getLine >> return ()
+--    else return ()
 
 ------------ образцы -------------------------------------------
 
@@ -102,18 +102,21 @@ __pwp prompt x = if __debug
 
 _samplesOs :: [([Sample], Price)]
 _samplesOs = [
-  ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 10), 
+  ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 10),
   ([" xxxx", "x xxx", "xx xx", "xxx x", "xxxx "], 9),
 
-   ([" xxx", "x xx", "xx x", "xxx "], 8),
- 
+  ([" xxx ", " ooo "],  8),
+
+
+  ([" xxx", "x xx", "xx x", "xxx "], 7),
+
   ([". ooo", "ooo ."], 7),
-  ([" ooo", "o oo", "oo o", "ooo "], 7),
-  
-  ([" oo", "o o", "oo "], 6),
-  ([" xx", "x x", "xx "], 5),
-  ([" o", "o "], 4),
-  ([" x", "x "], 3)
+  ([" ooo", "o oo", "oo o", "ooo "], 6),
+
+  ([" oo", "o o", "oo "], 5),
+  ([" xx", "x x", "xx "], 4),
+  ([" o", "o "], 3),
+  ([" x", "x "], 2)
   ]
 
 _samplesS :: Val -> [(Sample, Price)]
@@ -129,11 +132,11 @@ _samplesS val = let
 
 _samplesOt :: [([Sample], Price)]
 _samplesOt = [
-  (["ooooo"], 10^8), 
+  (["ooooo"], 10^8),
 
-  ([" xxxx "], -10^7),    
+  ([" xxxx "], -10^7),
   ([" xxxx", "x xxx", "xx xx", "xxx x", "xxxx "], -10^6), -- 'x' win in 1 step 
-  ([" x xx ", " xx x ", " xxx "], -10^5 * 5),      
+  ([" x xx ", " xx x ", " xxx "], -10^5 * 5),
 
   ([" oooo "], 10^5),
   ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 10^4),   -- 'o' win in 1 step
@@ -141,7 +144,7 @@ _samplesOt = [
 
   ([" x xx ", " xx x ", " xxx "], -10^3),                          -- 'x' fork in 1 step
   ([" o oo ", " oo o "], 10^2),                           -- 'o' fork in 1 step
-  
+
   (["  xxx", " x xx", " xx x", " xxx ", "x  xx", "x x x", "x xx ", "xx x ", "xxx  " ], -10), -- 'x' win in 2 steps  
   (["  ooo", " o oo", " oo o", " ooo ", "o  oo", "o o o", "o oo ", "oo o ", "ooo  " ], 1)   -- 'o' win in 2 steps
 
@@ -188,7 +191,7 @@ findSample matr xs = let
   aidEq r c = if [f $ val (r+i) (c-i) | i <- [0..n-1]] /= xs then Nothing
     else Just ((r, c), (r+n-1, c-n+1))
 
-  f x = case x of {'.' -> ' '; x -> x}  
+  f x = case x of {'.' -> ' '; x -> x}
 
  in
   [ fromJust x |  x <- hor ++ ver ++ dia ++ aid, isJust x]
@@ -210,61 +213,82 @@ selStepsOnTable v t width = do
   let samples = findSamples v (_samplesS v) matr  :: [((Pos, Pos), Sample, Price)]
   if null samples
     then randomStep v t
-    else return $ getPricedSteps samples
- where
-    getPricedSteps :: [((Pos, Pos), Sample, Price)] -> [(Price, Pos)]
-                -- ps =  [(10,(8,5)),(10,(3,5))]
-    getPricedSteps ps = (take width . nubBy (\a b -> snd a == snd b).reverse . sort) ps'
-      where
-    -- ps' = [(10,(3,5)),(8,(8,5)),(10,(8,5)),(6,(8,5)),(8,(3,5))]"
-        ps' = concatMap pricedStep ps :: [(Price, Pos)]
-        pricedStep :: ((Pos, Pos), Sample, Price) -> [(Price, Pos)]
-        pricedStep ((pos1, pos2), sample, price) =
-          [(price, pos) | (pos, s) <- zip (interpolation (pos1, pos2)) sample, s == ' ']
+    else return $ getPricedSteps width samples
 
+
+getPricedSteps :: Width -> [((Pos, Pos), Sample, Price)] -> [(Price, Pos)]
+                  -- ps =  [(10,(8,5)),(10,(3,5))]
+getPricedSteps width samples = (take width . nubBy (\a b -> snd a == snd b). reverse . sort) pricedSteps
+  where
+ -- pricedSteps' = [(10,(3,5)),(8,(8,5)),(10,(8,5)),(6,(8,5)),(8,(3,5))]"
+    pricedSteps = concatMap stepsOutOfSample samples :: [(Price, Pos)]
+
+    --pricedSteps = foldr addToDict [] pricedSteps'
+
+
+stepsOutOfSample :: ((Pos, Pos), Sample, Price) -> [(Price, Pos)]
+stepsOutOfSample ((pos1, pos2), sample, price) =
+   -- pps = [(10,(3,5)),(8,(8,5)),(10,(8,5)),(6,(8,5)),(8,(3,5))]"
+  [(price, pos) | (pos, s) <- zip (interpolation (pos1, pos2)) sample, s == ' ']
+  --in foldr addToDict [] pps
+
+------------------------------
+--f = nubBy (\a b -> snd a == snd b)
+
+addToDict (v, k) ((vD, kD) : dict)
+  | k == kD    = (v + vD, k) : dict
+  | otherwise = (vD, kD) : addToDict (v, k) dict
+addToDict vk [] = [vk]
 --------------------------------------------------------------
 
--- несколько варианов лучшего хода игрока (в порядке убыв. качества)
+-- несколько вариантов лучшего хода игрока (в порядке убыв. качества)
 
 nextSteps :: Val -> Table -> Settings -> IO [(Price, Pos)]
 nextSteps v t (level, width) = do
   steps <- selStepsOnTable v t width :: IO [(Price, Pos)]
+  -- цены дочерних таблиц, соотв. возможным ходам
+  pricedTables <- mapM (\step -> estimateStepOnTable v (snd step) t) steps  :: IO [(Price, Table)]
 
   if fst (head steps) == 10
     then return steps            -- есть выигрышный ход
-    else do
-      -- цены новых таблиц, соотв. возможным ходам
-      pricedTables <- mapM (\step -> estimateStepOnTable v (snd step) t) steps  :: IO [(Price, Table)]
-      let tPrices = map fst pricedTables 
-      -- соединяем цены таблиц с ходами игрока
-      let pricedSteps = zipWith (\(_, pos) tPrice -> (tPrice, pos) ) steps tPrices
-      -- 
-      let sortPricedSteps = (reverse . sort) pricedSteps :: [(Price, Pos)]
-      -- 
-      if level == 0 
-        then 
-          return sortPricedSteps 
+    else 
+      if level == 0
+        
+        then do
+          let tPrices = map fst pricedTables :: [Price]
+          
+          -- соединяем цены таблиц с ходами игрока
+          let pricedSteps = zipWith (\(_, pos) tPrice -> (tPrice, pos) ) steps tPrices
+          -- 
+          let sortPricedSteps = (reverse . sort) pricedSteps :: [(Price, Pos)]
+          --__trace ("sortPricedSteps v level" ++ show v ++ " "++ show level ++ " ") sortPricedSteps
+          return sortPricedSteps
+
         else do -- каждую доч. таблицу оцениваем с т. з. противника 
           -- дочерние таблицы
           let tables = snd <$> pricedTables
-          -- цены новых таблиц, соотв. возможным ходам
-          pricedSteps2  <- mapM (\tbl -> nextSteps (contra v) tbl (level-1, width)) tables
-          let tPrices2  = head <$> pricedSteps2
-          -- соединяем цены таблиц с ходами игрока
-          let pricedSteps2 = zipWith (\(_, pos) (tPrice, _) -> (-tPrice, pos) ) steps  tPrices2
-
-          let sortPricedSteps2 = (reverse . sort) pricedSteps2 :: [(Price, Pos)] 
+          -- функция оценки одной таблицы противником
+          let priceOfTable tbl = fst . head <$> nextSteps (contra v) tbl (level-1, width)   :: IO Price
+          -- цены новых таблиц с т.з. противника, соотв. возможным ходам
+          tPrices2 <- mapM priceOfTable tables :: IO [Price]
+          
+          -- соединяем оценки противника с ходами игрока
+          let pricedSteps2 = zipWith (\(_, pos) tPrice -> (tPrice, pos) ) steps  tPrices2
+          -- упоряд по возрастанию оценок противника
+          let sortPricedSteps2 = sort pricedSteps2 :: [(Price, Pos)]
+          --__trace ("sortPricedSteps v level" ++ show v ++ " "++ show level ++ " ") sortPricedSteps2
           return sortPricedSteps2
-
-
+  -- where
+  --   f tbl = nextSteps (contra v) tbl (level-1, width)    
+   
 -- оценка состояния, создавшегося после хода pos игрока v в состоянии table 
 estimateStepOnTable :: Val -> Pos -> Table -> IO (Price, Table)
 estimateStepOnTable v pos table = do
   t <- mapArray id table
   put t pos v
   matr <- getElems t
-  let ps = findSamples (contra v) (_samplesT v) matr
-  let price = sum [p | (pp, s, p) <- ps]
+  let ps = findSamples v (_samplesT v) matr     --- (contra v)  ???
+  let price = sum [p | (_, _, p) <- ps]
   return (price, t)
 
 -- случайный ход

@@ -1,5 +1,5 @@
 
-module Trace  ( logStep, logNew, loadFromLog) where
+module Trace  ( logStep, logNew, load, loadFromLog, __trace) where
 
 import Data.Array.IO ()
 import Control.Monad ( when )
@@ -23,8 +23,12 @@ logNew (level, width) = do
   hClose h
 
 loadFromLog :: IO (Settings, Table)
-loadFromLog = do
-  line <- readFile _LOG_TXT
+loadFromLog = load _LOG_TXT
+  
+
+load :: String -> IO (Settings, Table)
+load path = do
+  line <- readFile path
   let (d : w : rest) = line
   let valPoses = f rest
   t <- newTable
@@ -36,3 +40,4 @@ loadFromLog = do
   f _ = []
 
   g t (v, (r, c)) = put t (r, c) v
+
