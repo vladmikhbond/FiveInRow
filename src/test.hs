@@ -16,20 +16,45 @@ t1 = do
   return (s, t)
 
 t2 = do
-  t <- newTable
-  puts t [01,03,05,07] 'x'
+  (s, t) <- load "test/t2.txt"
   putStr clrscr
   drawTable t
   putStrLn $ norm ++ showCur
-  return t
+  return (s, t)
 
-t3 = do
+ooo = do
   t <- newTable
-  puts t [45,55,65,95] 'x'
+  puts t [33,34,35] 'o'
   putStr clrscr
   drawTable t
   putStrLn $ norm ++ showCur
-  return t
+  return ((1, 9), t)
+
+oooo = do
+  t <- newTable
+  puts t [33,34,35,36] 'o'
+  putStr clrscr
+  drawTable t
+  putStrLn $ norm ++ showCur
+  return ((1, 9), t)
+
+ooooo = do
+  t <- newTable
+  puts t [33,34,35,36,37] 'o'
+  putStr clrscr
+  drawTable t
+  putStrLn $ norm ++ showCur
+  return ((1, 9), t)
+
+xoooo = do
+  t <- newTable
+  puts t [33,34,35,36] 'o'
+  puts t [32] 'x'
+  putStr clrscr
+  drawTable t
+  putStrLn $ norm ++ showCur
+  return ((1, 9), t)
+
 
 --------------- Tests ----------------------------------------
 
@@ -54,23 +79,18 @@ test1 table = do
   steps2 <- selStepsOnTable 'x' t 5
   __trace "selStepsOnTable 'x'" steps2
   
-
--- priceTableAfterStep -- оценка таблицы после сделанного хода 
-
-test2 table = do
-  t <- table
-  priceX <- priceTableAfterStep 'x' t
-  __trace "ater X step " priceX
-  priceO <- priceTableAfterStep 'o' t
-  __trace "ater O step " priceO
-
-
+test2 table level = do
+  (s, t) <- table
+  (price, pos, table) <- selectStep t 'o' (level,  5) 
+  __trace "selectStep 'o' on table " (price, pos)
+  (priceX, posX, tableX) <- selectStep t 'o' (level,  5) 
+  __trace "selectStep 'x' on table " (priceX, posX)
+ 
 
 test3 table level = do
   (s, t) <- table
-  stepsO <- nextSteps 'o' t (level,  5) 
-  __trace "nextSteps O on table " stepsO
-  stepsX <- nextSteps 'x' t (level,  5) 
-  __trace "nextSteps X on table " stepsX
-
+  (price, table) <- estimateTable t 'o' (level,  5) 
+  __trace "estimateTable 'o' on table " price
+  (priceX, tableX) <- estimateTable t 'x' (level,  5) 
+  __trace "estimateTable 'x' on table " priceX
 

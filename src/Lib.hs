@@ -10,8 +10,9 @@
 
 module Lib (
   _size, interpolation, put, puts,  newTable,
-  priceTableAfterStep, selStepsOnTable, findSamplesS, findSamplesT,
-  randomStep, nextSteps, isCellEmpty, whoWon,
+  findSamplesS, findSamplesT,
+  randomStep, isCellEmpty, whoWon,
+  selStepsOnTable, selectStep, estimateTable,
   Table, Pos,  Matr, Sample, Price, Val, Level, Width, Settings
  ) where
 
@@ -36,8 +37,6 @@ type Width = Int
 type Settings = (Level, Width)
 
 _size = 10
-
-__debug = False
 
 get :: Table -> Pos -> IO Val
 get table (r, c) = readArray table (r * _size + c)
@@ -89,11 +88,7 @@ insertSepByN n xs sep = let (zs, rs) = splitAt n xs
 swapXO cs = [case c of {'x' -> 'o'; 'o' -> 'x'; c -> c } | c <- cs]
 eraseDots cs = [case c of {'.' -> ' '; c -> c } | c <- cs]
 contra v = case v of {'x' -> 'o'; 'o' -> 'x'}
-
-
--- __pwp prompt x = if __debug
---    then putStrLn ("---" ++ prompt ++"  "++ show x ++ " >") >> getLine >> return ()
---    else return ()
+_1 (a, b, c) = a
 
 ------------ образцы -------------------------------------------
 
@@ -102,6 +97,7 @@ contra v = case v of {'x' -> 'o'; 'o' -> 'x'}
 
 _samplesOs :: [([Sample], Price)]
 _samplesOs = [
+  
   ([" oooo", "o ooo", "oo oo", "ooo o", "oooo "], 10),
   ([" xxxx", "x xxx", "xx xx", "xxx x", "xxxx "], 9),
 
@@ -132,8 +128,6 @@ _samplesS val = let
 
 _samplesOt :: [([Sample], Price)]
 _samplesOt = [
-  (["ooooo"], 10^8),
-
   ([" xxxx "], -10^7),
   ([" xxxx", "x xxx", "xx xx", "xxx x", "xxxx "], -10^6), -- 'x' win in 1 step 
   ([" x xx ", " xx x ", " xxx "], -10^5 * 5),
@@ -198,14 +192,14 @@ findSample matr xs = let
 
 --------- цена таблицы после сделанного хода -------------------
 
-priceTableAfterStep :: Val -> Table -> IO Price
-priceTableAfterStep v t = do
-  matr <- getElems t
-  let ps = findSamples v (_samplesT v) matr
-  let price = sum [p | (pp, s, p) <- ps]
-  return price
+-- priceTableAfterStep :: Val -> Table -> IO Price
+-- priceTableAfterStep v t = do
+--   matr <- getElems t
+--   let ps = findSamples v (_samplesT v) matr
+--   let price = sum [p | (pp, s, p) <- ps]
+--   return price
 
---------- выбор подходящих ходов v из заданной таблицы ------------------
+--------- список перспективных ходов v из заданной таблицы в пор убывания цены ------------------
 
 selStepsOnTable :: Val -> Table -> Width -> IO [(Price, Pos)]
 selStepsOnTable v t width = do
@@ -230,66 +224,8 @@ stepsOutOfSample :: ((Pos, Pos), Sample, Price) -> [(Price, Pos)]
 stepsOutOfSample ((pos1, pos2), sample, price) =
    -- pps = [(10,(3,5)),(8,(8,5)),(10,(8,5)),(6,(8,5)),(8,(3,5))]"
   [(price, pos) | (pos, s) <- zip (interpolation (pos1, pos2)) sample, s == ' ']
-  --in foldr addToDict [] pps
 
-------------------------------
---f = nubBy (\a b -> snd a == snd b)
-
-addToDict (v, k) ((vD, kD) : dict)
-  | k == kD    = (v + vD, k) : dict
-  | otherwise = (vD, kD) : addToDict (v, k) dict
-addToDict vk [] = [vk]
 --------------------------------------------------------------
-
--- несколько вариантов лучшего хода игрока (в порядке убыв. качества)
-
-nextSteps :: Val -> Table -> Settings -> IO [(Price, Pos)]
-nextSteps v t (level, width) = do
-  steps <- selStepsOnTable v t width :: IO [(Price, Pos)]
-  -- цены дочерних таблиц, соотв. возможным ходам
-  pricedTables <- mapM (\step -> estimateStepOnTable v (snd step) t) steps  :: IO [(Price, Table)]
-
-  if fst (head steps) == 10
-    then return steps            -- есть выигрышный ход
-    else 
-      if level == 0
-        
-        then do
-          let tPrices = map fst pricedTables :: [Price]
-          
-          -- соединяем цены таблиц с ходами игрока
-          let pricedSteps = zipWith (\(_, pos) tPrice -> (tPrice, pos) ) steps tPrices
-          -- 
-          let sortPricedSteps = (reverse . sort) pricedSteps :: [(Price, Pos)]
-          --__trace ("sortPricedSteps v level" ++ show v ++ " "++ show level ++ " ") sortPricedSteps
-          return sortPricedSteps
-
-        else do -- каждую доч. таблицу оцениваем с т. з. противника 
-          -- дочерние таблицы
-          let tables = snd <$> pricedTables
-          -- функция оценки одной таблицы противником
-          let priceOfTable tbl = fst . head <$> nextSteps (contra v) tbl (level-1, width)   :: IO Price
-          -- цены новых таблиц с т.з. противника, соотв. возможным ходам
-          tPrices2 <- mapM priceOfTable tables :: IO [Price]
-          
-          -- соединяем оценки противника с ходами игрока
-          let pricedSteps2 = zipWith (\(_, pos) tPrice -> (tPrice, pos) ) steps  tPrices2
-          -- упоряд по возрастанию оценок противника
-          let sortPricedSteps2 = sort pricedSteps2 :: [(Price, Pos)]
-          --__trace ("sortPricedSteps v level" ++ show v ++ " "++ show level ++ " ") sortPricedSteps2
-          return sortPricedSteps2
-  -- where
-  --   f tbl = nextSteps (contra v) tbl (level-1, width)    
-   
--- оценка состояния, создавшегося после хода pos игрока v в состоянии table 
-estimateStepOnTable :: Val -> Pos -> Table -> IO (Price, Table)
-estimateStepOnTable v pos table = do
-  t <- mapArray id table
-  put t pos v
-  matr <- getElems t
-  let ps = findSamples v (_samplesT v) matr     --- (contra v)  ???
-  let price = sum [p | (_, _, p) <- ps]
-  return (price, t)
 
 -- случайный ход
 randomStep :: Val -> Table -> IO [(Price, Pos)]
@@ -301,4 +237,69 @@ randomStep v t = do
    if empty
      then return [(0, (a, b))]
      else randomStep v t
+
+{--
+Выбор хода :: таблица - игрок - сеттингс - (цена, позиция, доч.таблица)
+1. Найти перспективные ходы игрока 
+   и построить дочерние таблицы           :: таблица - игрок - сеттингс - [доч таблица]
+2  Каждой доч.таблице приписать цену таким способом:  
+     Если уровень = 0 
+     просто подсчитываем сумм цену образцов
+     Если уровень > 0 
+     вызываем выбор хода для противника и обращаем знак цены
+3. Выбрать ход, соотв лучшей оценке
+
+whoWon :: Table -> IO (Val, (Pos, Pos))
+--}
+selectStep :: Table -> Val -> Settings -> IO (Price, Pos, Table)
+selectStep t v sets = do
+  perSteps <- selStepsOnTable v t (snd sets)  :: IO [(Price, Pos)] 
+  --__trace "perSteps" perSteps
+  let bestPos = (snd . head) perSteps
+  t' <- mapArray id t
+  put t' bestPos v
+  (who, _) <- whoWon t'
+
+  if who == v 
+    then return (10^8, bestPos, t')
+    else do
+      chTables <- sequence [createChTable v pos t | (_, pos) <- perSteps]  :: IO [Table]
+      ------ Rec ------
+      pricedTables <- mapM (\tbl -> estimateTable tbl v sets) chTables     :: IO [(Price, Table)] 
+      -- [(оценка, ход игрока, доч.таблица)]
+      let ps = zipWith (\(prT, t) (prP, pos) -> (prT, pos, t)) 
+                pricedTables perSteps                            :: [(Price, Pos, Table)]
+      -- находит ход с макс оценкой
+      let ps' = foldr1 (\x a -> if _1 x > _1 a then x else a) ps   
+      return ps'
+  
+  
+estimateTable :: Table -> Val -> Settings -> IO (Price, Table)
+estimateTable t v sets = do
+    let level = fst sets
+    ------ Rec ------
+    if level == 0 
+      then do -- оценка таблицы как сумма цен образцов
+        matr <- getElems t
+        let ps = findSamples v (_samplesT v) matr 
+        let price = sum [p | (_, _, p) <- ps]
+        return (price, t)
+      else do -- оценка той же таблицы с т.з противника
+        let v' = contra v
+        let sets' = (level - 1, snd sets)
+        ---        
+        (price, _, t' ) <- selectStep t v' sets' 
+        return (-price, t')
+
+
+createChTable :: Val -> Pos -> Table -> IO Table
+createChTable v pos table = do
+  t <- mapArray id table
+  put t pos v
+  return t
+    
+ 
+
+
+
 

@@ -15,36 +15,36 @@ main :: IO ()
 main = do
   -----
   args <- getArgs
-  let settings = if length args < 2 
-                  then (1, 9) 
+  let sets = if length args < 2 
+                  then (0, 5) 
                   else (read (head args), read (args !! 1)  )
-  logNew settings
+  logNew sets
   table <- newTable
   -----
-  -- (settings, table) <- loadFromLog
+  -- (sets, table) <- loadFromLog  -- 
   -----
   putStr clrscr
   drawTable table
-  run table settings
+  run table sets
 
 -------------------------------------------------------
 run :: Table -> Settings -> IO ()
-run t d_w = do
-  putStr' $ norm ++ rc 22 0 ++ showCur ++ "("++ show (fst d_w) ++" "++ show (snd d_w) ++") q-quit >"
+run t sets = do
+  putStr' $ norm ++ rc 22 0 ++ showCur ++ 
+            "("++ show (fst sets) ++" "++ show (snd sets) ++") q-quit >"
 
   line <- getLine
   when ('q' `notElem` line)  (do
       case readMaybe line of
-        Nothing -> run t d_w
-        Just posXint -> twoMoves t d_w posXint
+        Nothing -> run t sets
+        Just posXint -> twoMoves t sets (divMod posXint 10)
       )
 
-twoMoves :: Table -> Settings -> Int -> IO ()
-twoMoves t settings posXint = do
-  let posX = divMod posXint 10
+twoMoves :: Table -> Settings -> Pos -> IO ()
+twoMoves t sets posX = do
   isEmpty <- isCellEmpty t posX
   if not isEmpty
-    then run t settings
+    then run t sets
     else do
       put t posX 'x'
       hilightPos t 'x' posX
@@ -53,15 +53,14 @@ twoMoves t settings posXint = do
       if fst winer == 'x'
         then epilog t winer
         else do
-          positionsO <- nextSteps 'o' t settings
-          let posO = snd $ head positionsO
+          (_, posO, _) <- selectStep t 'o' sets
           put t posO 'o'
           hilightPos t 'o' posO
           logStep 'o' posO
           winer <- whoWon t
           if fst winer == 'o'
             then epilog t winer
-            else run t settings
+            else run t sets
 
 epilog table winer = do
   hilightWin table winer

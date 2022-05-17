@@ -53,7 +53,7 @@ drawCell matr row col
 
 hilightPos :: Table -> Char -> Pos -> IO ()
 hilightPos t who (r, c) = do
-  putStr' $ rc r' c' ++ hideCur ++ colorB ++ color ++ sym
+  putStr' $ rc r' c' ++ hideCur ++ yellowB ++ color ++ sym
   threadDelay 200000
   putStr' $ rc r' c' ++ colorB ++ color ++ sym
  where
